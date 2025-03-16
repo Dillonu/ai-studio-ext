@@ -1,0 +1,31 @@
+{
+    "manifest_version": 3,
+    "name": "AI Studio Extension",
+    "version": "1.0.0",
+    "description": "Extension to enhance Google's AI Studio functionality",
+    "permissions": ["storage"],
+    "host_permissions": ["https://aistudio.google.com/*"],
+    "action": {
+        "default_icon": {
+            "16": "assets/icons/icon-16x16-any.png",
+            "48": "assets/icons/icon-48x48-any.png",
+            "128": "assets/icons/icon-128x128-any.png"
+        }
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://aistudio.google.com/*"],
+            "js": ["api/auth.js", "api/new-prompt.js", "content-script.js"]
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": ["auth.js", "api/new-prompt.js"],
+            "matches": ["https://aistudio.google.com/*"]
+        }
+    ],
+    "background": {
+        "service_worker": "background.js",
+        "type": "module"
+    }
+}

@@ -1,0 +1,17 @@
+.popup-container {
+    width: 360px;
+
+    mat-card {
+        margin-top: 16px;
+    }
+
+    .action-container {
+        margin-top: 16px;
+        display: flex;
+        justify-content: center;
+
+        button {
+            margin: 0 8px;
+        }
+    }
+}

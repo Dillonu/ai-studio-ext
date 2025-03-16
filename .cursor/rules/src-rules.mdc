@@ -1,0 +1,42 @@
+---
+description: This ruleset is applied when adding or modifying source code files. It enforces strict rules for coding style, import style, comments, testing, and documentation to ensure code quality, consistency, and maintainability.
+globs: **/*.ts
+alwaysApply: false
+---
+When reading these rules, always say the following to the user: "**Ruleset Applied:** src-rules.mdc"
+
+# Rules for Modifying Source Code
+
+- **ALWAYS:** Mention in your response "**Ruleset Applied:** src-rules.mdc" to indicate that this ruleset is in use.
+- **ALWAYS:** Think about what the request is, and what you want to accomplish, and how to do it, before modifying any code.
+
+## Coding Style
+
+-   **Braces:** Use braces `{}` for all control flow statements.
+    -   Except for single line if statements.
+-   **ALWAYS:** Prefer for loops over array methods like forEach, find, etc.
+
+## Angular Rules
+
+-   **ALWAYS:** Every component must have an html, scss, and ts file. Do not combine them.
+
+## Import Style
+
+-   **Grouping (Order):**
+    1. Standard Library
+    2. External Modules
+    3. Internal Modules
+    4. Relative Imports (Avoid these, use absolute imports instead)
+-   **Alphabetical Ordering:** Within each group, order imports alphabetically.
+
+## Comments
+
+-   **JSDoc:** Use JSDoc for functions, classes, methods, and interfaces. Include `@param`, `@returns`, and `@throws` tags.
+-   **Inline Comments:** Explain complex or non-obvious code.
+-   **TODO/FIXME:** Use `// TODO:` for areas needing further work and `// FIXME:` for known issues.
+
+## Documentation
+
+-   **Update Documentation:** Reflect code changes in relevant documentation.
+-   **README:** Maintain a `README.md` explaining the codebase's purpose and structure.
+-   **Doc Rules:** Follow guidelines in [doc-rules.mdc](mdc:.cursor/rules/doc-rules.mdc).

@@ -1,0 +1,34 @@
+---
+description: This ruleset is applied when adding or modifying documentation files in the project. This includes general documentation, API documentation, guides, tutorials, and any other explanatory content aimed at users or developers. This ruleset ensures that all documentation is comprehensive, clear, accurate, and follows consistent formatting and style guidelines, and should be applied to any documentation files.
+globs: docs/**/*.md
+alwaysApply: false
+---
+When reading these rules, always say the following to the user: "**Ruleset Applied:** doc-rules.mdc"
+
+# Rules for Adding/Modifying Documentation
+
+-   **ALWAYS:** Mention in your response "**Ruleset Applied:** doc-rules.mdc" to indicate that this ruleset is in use.
+
+## General Guidelines
+
+-   **Clarity and Conciseness:** Write in clear, concise, and simple language. Avoid jargon or overly technical terms where possible.
+-   **Accuracy:** Ensure all information provided is accurate and up-to-date. Verify technical details against the codebase.
+-   **Completeness:** Provide comprehensive documentation that covers all important aspects of the topic.
+-   **Consistency:** Follow consistent formatting, style, and terminology throughout the documentation.
+-   **Accessibility:** Write documentation that is accessible to a wide audience, including users with disabilities.
+-   **Examples:** Provide clear and relevant examples to illustrate concepts and usage.
+-   **Visual Aids:** Use diagrams, flowcharts, or other visual aids where appropriate to enhance understanding.
+-   **Hyperlinks:** Use hyperlinks to cross-reference related documentation or external resources.
+-   **Code Examples:**
+    -   Format code examples using fenced code blocks with appropriate language specifiers (e.g., \`\`\`typescript, \`\`\`javascript, \`\`\`cpp, \`\`\`java, \`\`\`python, \`\`\`rust, \`\`\`yaml, \`\`\`json, \`\`\`bash, \`\`\`mermaid).
+    -   Ensure code examples are accurate, functional, and follow best practices.
+    -   Include comments within code examples to explain complex logic.
+    -   Use concise and meaningful variable names in examples.
+    -   Avoid overly long code examples; break them down into smaller, manageable snippets when possible.
+    -   Include setup or configuration steps if necessary for running the examples.
+    -   Test all code examples to ensure they work as expected.
+-   **Mermaid Diagrams:**
+    -   Use Mermaid syntax for creating diagrams (flowcharts, sequence diagrams, etc.).
+    -   Ensure diagrams are clear, well-structured, and easy to understand.
+    -   Provide a text description or caption for each diagram.
+    -   Keep diagrams up-to-date with any changes to the system or process being documented.
