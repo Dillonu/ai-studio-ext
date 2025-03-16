@@ -1,6 +1,6 @@
-# Contributing to AI Studio Extension
+# Contributing to AI Studio Extended
 
-Thank you for your interest in contributing to the AI Studio Extension! This document provides guidelines and instructions for contributing to this project.
+Thank you for your interest in contributing to the AI Studio Extended! This document provides guidelines and instructions for contributing to this project.
 
 ## Code of Conduct
 
@@ -28,8 +28,8 @@ This project uses:
 1. Fork the repository
 2. Clone your fork:
     ```
-    git clone https://github.com/YOUR_USERNAME/ai-studio-ext.git
-    cd ai-studio-ext
+    git clone https://github.com/YOUR_USERNAME/ai-studio-extended.git
+    cd ai-studio-extended
     ```
 3. Install dependencies:
     ```

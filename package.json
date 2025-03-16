@@ -1,16 +1,16 @@
 {
-    "name": "ai-studio-extension",
+    "name": "ai-studio-extended",
     "version": "1.0.0",
     "description": "Chrome extension to enhance Google's AI Studio",
     "author": "Dillon Uzar",
     "license": "Apache-2.0",
-    "homepage": "https://github.com/Dillonu/ai-studio-extension#readme",
+    "homepage": "https://github.com/Dillonu/ai-studio-extended#readme",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/Dillonu/ai-studio-extension.git"
+        "url": "git+https://github.com/Dillonu/ai-studio-extended.git"
     },
     "bugs": {
-        "url": "https://github.com/Dillonu/ai-studio-extension/issues"
+        "url": "https://github.com/Dillonu/ai-studio-extended/issues"
     },
     "scripts": {
         "start": "ng serve",

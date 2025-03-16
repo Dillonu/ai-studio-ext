@@ -3,7 +3,7 @@
     "version": 1,
     "newProjectRoot": "projects",
     "projects": {
-        "ai-studio-extension": {
+        "ai-studio-extended": {
             "projectType": "application",
             "schematics": {
                 "@schematics/angular:component": {
@@ -39,7 +39,7 @@
                 "build": {
                     "builder": "@angular-devkit/build-angular:browser",
                     "options": {
-                        "outputPath": "dist/ai-studio-extension",
+                        "outputPath": "dist/ai-studio-extended",
                         "index": "src/index.html",
                         "main": "src/main.ts",
                         "polyfills": ["zone.js"],
@@ -80,10 +80,10 @@
                     "builder": "@angular-devkit/build-angular:dev-server",
                     "configurations": {
                         "production": {
-                            "browserTarget": "ai-studio-extension:build:production"
+                            "browserTarget": "ai-studio-extended:build:production"
                         },
                         "development": {
-                            "browserTarget": "ai-studio-extension:build:development"
+                            "browserTarget": "ai-studio-extended:build:development"
                         }
                     },
                     "defaultConfiguration": "development"

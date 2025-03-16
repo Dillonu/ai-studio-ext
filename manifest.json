@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "AI Studio Extension",
+    "name": "AI Studio Extended",
     "version": "1.0.0",
     "description": "Extension to enhance Google's AI Studio functionality",
     "permissions": ["storage"],

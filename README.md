@@ -1,4 +1,4 @@
-# AI Studio Extension
+# AI Studio Extended
 
 A Chrome extension that enhances Google's AI Studio with additional functionality, making your AI development workflow more efficient.
 
@@ -38,13 +38,13 @@ Here's how the extension looks in action:
 
 ### From Chrome Web Store (Coming Soon)
 
-1. Visit the Chrome Web Store page for AI Studio Extension (link will be provided once published)
+1. Visit the Chrome Web Store page for AI Studio Extended (link will be provided once published)
 2. Click "Add to Chrome"
 3. Confirm the installation when prompted
 
 ### Manual Installation (For Developers or Advanced Users)
 
-1. Download the latest release from the [Releases page](https://github.com/Dillonu/ai-studio-extension/releases)
+1. Download the latest release from the [Releases page](https://github.com/Dillonu/ai-studio-extended/releases)
 2. Unzip the downloaded file
 3. Open Chrome and navigate to `chrome://extensions/`
 4. Enable "Developer mode" in the top-right corner
@@ -71,7 +71,7 @@ If you're interested in contributing to this project, please see the [CONTRIBUTI
 
 If you encounter any issues or have suggestions for improvements:
 
-1. Check the [Issues](https://github.com/Dillonu/ai-studio-extension/issues) page to see if your issue has already been reported
+1. Check the [Issues](https://github.com/Dillonu/ai-studio-extended/issues) page to see if your issue has already been reported
 2. If not, create a new issue with a clear description and steps to reproduce
 
 ## License

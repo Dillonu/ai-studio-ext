@@ -6,7 +6,7 @@ const path = require("path");
 const { exec } = require("child_process");
 
 const sourceDir = path.resolve(__dirname, "..");
-const distDir = path.resolve(sourceDir, "dist/ai-studio-extension");
+const distDir = path.resolve(sourceDir, "dist/ai-studio-extended");
 
 const slim = process.argv.includes("slim");
 if (slim) {

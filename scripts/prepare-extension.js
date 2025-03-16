@@ -6,7 +6,7 @@ const fs = require("fs");
 const path = require("path");
 
 const sourceDir = path.resolve(__dirname, "..");
-const distDir = path.resolve(sourceDir, "dist/ai-studio-extension");
+const distDir = path.resolve(sourceDir, "dist/ai-studio-extended");
 
 // Ensure dist directory exists
 if (!fs.existsSync(distDir)) {
