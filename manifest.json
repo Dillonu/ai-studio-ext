@@ -3,7 +3,7 @@
     "name": "AI Studio Extended",
     "version": "1.0.0",
     "description": "Extension to enhance Google's AI Studio functionality",
-    "permissions": ["storage"],
+    "permissions": [],
     "host_permissions": ["https://aistudio.google.com/*"],
     "action": {
         "default_icon": {
