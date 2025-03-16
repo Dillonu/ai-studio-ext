@@ -1,14 +1,33 @@
 # AI Studio Extended
 
-A Chrome extension that enhances Google's AI Studio with additional functionality, making your AI development workflow more efficient.
+A Chrome extension that enhances Google's AI Studio with additional functionality, making your AI development workflow more efficient. This extension works exclusively on [Google AI Studio](https://aistudio.google.com/) and seamlessly integrates with the existing AI Studio interface.
 
-## What It Does
+## Table of Contents
+
+-   [Features](#features)
+    -   [Import Prompt](#import-prompt)
+-   [Screenshots](#screenshots)
+-   [Installation](#installation)
+    -   [From Chrome Web Store](#from-chrome-web-store-coming-soon)
+    -   [Manual Installation](#manual-installation-for-developers-or-advanced-users)
+-   [Usage](#usage)
+-   [Privacy & Security](#privacy--security)
+-   [For Developers](#for-developers)
+-   [Support](#support)
+-   [License](#license)
+
+## Features
 
 This extension adds useful features to Google's AI Studio, including:
 
--   **Import Prompt Button**: Adds a convenient "Import Prompt" button right below the "Create Prompt" button in the navigation menu
--   Works exclusively on [Google AI Studio](https://aistudio.google.com/)
--   Seamlessly integrates with the existing AI Studio interface
+### Import Prompt
+
+Adds a convenient "Import Prompt" button right below the "Create Prompt" button in the navigation menu
+
+The Import Prompt feature supports the following formats:
+
+-   [Gemini API (models.generateContent format)](https://ai.google.dev/api/generate-content#method:-models.generatecontent)
+-   [AI Studio Prompt Library](https://aistudio.google.com/library)
 
 ## Screenshots
 
