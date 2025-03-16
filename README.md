@@ -26,8 +26,8 @@ Adds a convenient "Import Prompt" button right below the "Create Prompt" button 
 
 The Import Prompt feature supports the following formats:
 
--   [Gemini API (models.generateContent format)](https://ai.google.dev/api/generate-content#method:-models.generatecontent)
--   [AI Studio Prompt Library](https://aistudio.google.com/library)
+-   [Gemini API](https://ai.google.dev/api/generate-content#method:-models.generatecontent) (models.generateContent Request format)
+-   [AI Studio Prompt](https://aistudio.google.com/library) (prompts can be downloaded from your Google Drive)
 
 ## Screenshots
 
