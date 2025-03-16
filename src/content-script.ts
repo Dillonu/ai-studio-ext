@@ -847,6 +847,7 @@ function showImportDialog(): void {
     if (isImportDialogOpen || !overlayContainer) return;
 
     // Reset the dialog state
+    const fileInput = overlayContainer.querySelector("#import-file-input") as HTMLInputElement;
     const fileDropArea = overlayContainer.querySelector(".import-file-drop-area") as HTMLElement;
     const fileInfo = overlayContainer.querySelector(".import-file-info") as HTMLElement;
     const jsonTextarea = overlayContainer.querySelector(".import-json-textarea") as HTMLTextAreaElement;
@@ -854,6 +855,7 @@ function showImportDialog(): void {
     const errorDiv = overlayContainer.querySelector("#import-validation-error") as HTMLElement;
 
     // Reset file upload tab
+    if (fileInput) fileInput.value = "";
     if (fileDropArea) fileDropArea.style.display = "flex";
     if (fileInfo) {
         fileInfo.style.display = "none";
