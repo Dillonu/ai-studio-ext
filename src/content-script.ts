@@ -593,12 +593,8 @@ async function positionTooltip(tooltip: HTMLElement, buttonRect: DOMRect): Promi
         transformOrigin = "center right";
     }
 
-    console.log("tooltipHeight", tooltipHeight);
-    console.log("top", top);
-    console.log("viewportHeight", viewportHeight);
-
     // Check if tooltip would go off the top of the screen
-    /*if (top - tooltipHeight / 2 < 20) {
+    if (top - tooltipHeight / 2 < 20) {
         // Position below the top edge with some padding
         const topAdjustment = Math.abs(top - tooltipHeight / 2 - 20);
         transformValue = `translateY(calc(-50% + ${topAdjustment}px))`;
@@ -610,7 +606,7 @@ async function positionTooltip(tooltip: HTMLElement, buttonRect: DOMRect): Promi
         const bottomAdjustment = top + tooltipHeight / 2 - viewportHeight + 20;
         transformValue = `translateY(calc(-50% - ${bottomAdjustment}px))`;
         transformOrigin = `bottom ${left > buttonRect.left ? "left" : "right"}`;
-    }*/
+    }
 
     // Apply position and transforms for final placement
     tooltip.style.left = `${left}px`;
