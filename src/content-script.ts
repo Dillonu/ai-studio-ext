@@ -323,6 +323,23 @@ function injectStatusLink(targetElement: Element): void {
     if (statusLink) {
         statusLink.addEventListener("mouseenter", showStatusTooltip);
         statusLink.addEventListener("mouseleave", hideStatusTooltip);
+
+        // Add additional event listeners for robustness
+        window.addEventListener("blur", hideStatusTooltip);
+        window.addEventListener("scroll", hideStatusTooltip);
+
+        // Add a document-level click handler to hide tooltip when clicking elsewhere
+        document.addEventListener("click", (event) => {
+            if (
+                statusTooltipContainer &&
+                statusTooltipContainer.style.opacity !== "0" &&
+                event.target instanceof Node &&
+                !statusLink.contains(event.target) &&
+                !statusTooltipContainer.contains(event.target)
+            ) {
+                hideStatusTooltip();
+            }
+        });
     }
 }
 
