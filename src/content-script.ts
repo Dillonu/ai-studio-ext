@@ -357,13 +357,13 @@ function addTooltipStyles(): void {
                 pointer-events: none;
                 user-select: none;
                 opacity: 0;
-                transform: translateY(-50%) scale(0.5);
-                transform-origin: center left;
-                transition: opacity 0.05s ease-in-out, transform 0.05s ease-in-out;
+                /* Allow transform to be set dynamically while keeping the scale effect */
+                transform: scale(0.5);
+                transition: opacity 0.1s ease-in-out, transform 0.1s ease-in-out;
             }
 
             .ai-studio-status-tooltip > .mat-mdc-tooltip {
-                width: 280px;
+                width: fit-content;
                 max-width: 80vw;
                 max-height: calc(100vh - 150px);
                 overflow-y: auto;
@@ -459,6 +459,13 @@ function addTooltipStyles(): void {
                 opacity: 0.9;
             }
 
+            .status-incident-time {
+                margin-top: -0.5em;
+                font-size: 11px;
+                opacity: 0.8;
+                font-style: italic;
+            }
+
             .status-no-incidents {
                 font-style: italic;
                 opacity: 0.7;
@@ -501,18 +508,23 @@ function createStatusTooltip(): void {
 /**
  * Shows the status tooltip and positions it next to the status icon
  */
-function showStatusTooltip(): void {
+async function showStatusTooltip(): Promise<void> {
     if (!statusTooltipElement || !statusTooltipContainer) return;
 
     // Position the tooltip
     const iconElement = document.getElementById("ai-studio-status-icon")?.parentElement?.parentElement?.parentElement;
     if (iconElement) {
         const iconRect = iconElement.getBoundingClientRect();
-        positionTooltip(statusTooltipContainer, iconRect);
+        await positionTooltip(statusTooltipContainer, iconRect);
 
         // Make tooltip visible
-        statusTooltipContainer.style.opacity = "1";
-        statusTooltipContainer.style.transform = "translateY(-50%) scale(1)";
+        if (statusTooltipContainer) {
+            statusTooltipContainer.style.opacity = "1";
+            statusTooltipContainer.style.transform = statusTooltipContainer.style.transform.replace(
+                "scale(0.5)",
+                "scale(1)"
+            );
+        }
     }
 }
 
@@ -522,7 +534,11 @@ function showStatusTooltip(): void {
 function hideStatusTooltip(): void {
     if (statusTooltipContainer) {
         statusTooltipContainer.style.opacity = "";
-        statusTooltipContainer.style.transform = "translateY(-50%) scale(0.5)";
+        // Keep the position/translation but scale down
+        statusTooltipContainer.style.transform = statusTooltipContainer.style.transform.replace(
+            "scale(1)",
+            "scale(0.5)"
+        );
     }
 }
 
@@ -532,46 +548,84 @@ function hideStatusTooltip(): void {
  * @param {HTMLElement} tooltip - The tooltip element
  * @param {DOMRect} buttonRect - The button's bounding rectangle
  */
-function positionTooltip(tooltip: HTMLElement, buttonRect: DOMRect): void {
+async function positionTooltip(tooltip: HTMLElement, buttonRect: DOMRect): Promise<void> {
     if (!tooltip) return;
 
     // Default position to the right of the button
     let left = buttonRect.right + 8;
     let top = buttonRect.top + buttonRect.height / 2;
 
-    // Reset any previous transforms
-    tooltip.style.transform = "translateY(-50%)";
-
-    // Calculate tooltip dimensions
-    const tooltipWidth = tooltip.offsetWidth || 280; // Use 280 as fallback
-    const tooltipHeight = tooltip.offsetHeight || 200; // Use 200 as fallback
-
-    // Check viewport boundaries
+    // Get viewport dimensions
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // Check if tooltip would overflow right edge
-    if (left + tooltipWidth > viewportWidth) {
+    // Temporarily disable transitions and set scale to 1 for accurate measurements
+    const originalTransition = tooltip.style.transition;
+    const originalTransform = tooltip.style.transform;
+    const originalOpacity = tooltip.style.opacity;
+    tooltip.style.transition = "none";
+    tooltip.style.transform = tooltip.style.transform.replace("scale(0.5)", "scale(1)");
+    tooltip.style.opacity = "0"; // Keep invisible during measurement
+
+    // Force layout recalculation to apply style changes immediately
+    tooltip.offsetHeight;
+
+    // Get actual tooltip dimensions at scale(1)
+    const tooltipWidth = tooltip.offsetWidth;
+    const tooltipHeight = tooltip.offsetHeight;
+
+    if (!tooltipWidth || !tooltipHeight) {
+        // Restore original styles if we can't get dimensions
+        tooltip.style.transform = originalTransform;
+        tooltip.style.opacity = originalOpacity;
+        tooltip.style.transition = originalTransition;
+        return;
+    }
+
+    // Calculate optimal position and transform
+    let transformValue = "translateY(-50%)";
+    let transformOrigin = "center left";
+
+    // Check horizontal overflow
+    if (left + tooltipWidth > viewportWidth - 20) {
         // Position to the left of the button
         left = buttonRect.left - 8 - tooltipWidth;
+        transformOrigin = "center right";
     }
 
-    // Ensure the tooltip doesn't go off the top or bottom of the viewport
-    const topOffset = top - tooltipHeight / 2;
-    const bottomOffset = top + tooltipHeight / 2;
+    console.log("tooltipHeight", tooltipHeight);
+    console.log("top", top);
+    console.log("viewportHeight", viewportHeight);
 
-    // Adjust if too high
-    if (topOffset < 0) {
-        tooltip.style.transform = `translateY(${Math.abs(topOffset) + 10}px) translateY(-50%)`;
+    // Check if tooltip would go off the top of the screen
+    /*if (top - tooltipHeight / 2 < 20) {
+        // Position below the top edge with some padding
+        const topAdjustment = Math.abs(top - tooltipHeight / 2 - 20);
+        transformValue = `translateY(calc(-50% + ${topAdjustment}px))`;
+        transformOrigin = `top ${left > buttonRect.left ? "left" : "right"}`;
     }
-    // Adjust if too low
-    else if (bottomOffset > viewportHeight) {
-        tooltip.style.transform = `translateY(-${bottomOffset - viewportHeight + 10}px) translateY(-50%)`;
-    }
+    // Check if tooltip would go off the bottom of the screen
+    else if (top + tooltipHeight / 2 > viewportHeight - 20) {
+        // Position above the bottom edge with some padding
+        const bottomAdjustment = top + tooltipHeight / 2 - viewportHeight + 20;
+        transformValue = `translateY(calc(-50% - ${bottomAdjustment}px))`;
+        transformOrigin = `bottom ${left > buttonRect.left ? "left" : "right"}`;
+    }*/
 
-    // Apply position
+    // Apply position and transforms for final placement
     tooltip.style.left = `${left}px`;
     tooltip.style.top = `${top}px`;
+    tooltip.style.transformOrigin = transformOrigin;
+    tooltip.style.transform = transformValue + " scale(0.5)"; // Keep initially scaled down
+
+    return new Promise((resolve) => {
+        // Restore the original transition and scale
+        setTimeout(() => {
+            tooltip.style.opacity = originalOpacity; // Restore original opacity
+            tooltip.style.transition = originalTransition;
+            resolve();
+        }, 50);
+    });
 }
 
 /**
@@ -655,7 +709,10 @@ function updateStatusTooltip(): void {
                     tooltipHtml += `
                         <li class="status-incident-item">
                             <div class="status-incident-name">${incident.incidentName}</div>
-                            <div class="status-incident-description">${incident.incidentDescription}</div>
+                            <div class="status-incident-description">
+                                ${incident.incidentDescription}
+                                <div class="status-incident-time">${formatDate(incident.timestamp)}</div>
+                            </div>
                         </li>
                     `;
                 }
@@ -670,6 +727,23 @@ function updateStatusTooltip(): void {
 
     // Set the tooltip content
     statusTooltipElement.innerHTML = tooltipHtml;
+}
+
+/**
+ * Formats a date string to a more readable format
+ *
+ * @param {string} dateString - The date string to format
+ * @returns {string} The formatted date string
+ */
+function formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
 }
 
 /**
@@ -1500,6 +1574,7 @@ interface ActiveIncidentData {
     incidentName: string;
     incidentDescription: string;
     severity: number;
+    timestamp: string;
 }
 
 /**
@@ -1529,7 +1604,8 @@ function determineSystemStatus(incidentsData: any): string {
     for (let i = 0; i < incidents.length; i++) {
         const incident = incidents[i];
         const platformId = incident[4];
-        const statusUpdates = incident[3];
+        const statusUpdates = incident[3].filter((update: any) => update[0] !== INCIDENT_STATUS.RESOLVED);
+        incident[2] = Math.floor(Math.random() * 2) + 1;
 
         // Check if the incident is still unresolved, regardless of platform
         // Get the latest update to display in tooltip
@@ -1542,6 +1618,7 @@ function determineSystemStatus(incidentsData: any): string {
                 incidentName: incident[1],
                 incidentDescription: INCIDENT_STATUS_NAMES[latestUpdate[0]] + ": " + latestUpdate[3],
                 severity: incident[2],
+                timestamp: latestUpdate[1],
             });
 
             // Check the outage severity
