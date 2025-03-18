@@ -7,6 +7,57 @@ let overlayContainer: HTMLElement | null = null;
 let dialogContainer: HTMLElement | null = null;
 let isImportDialogOpen = false;
 
+// Status constants
+const STATUS = {
+    OPERATIONAL: "check_circle",
+    PARTIAL_OUTAGE: "warning",
+    TOTAL_OUTAGE: "report",
+    PENDING: "pending",
+    ERROR: "error",
+};
+
+// Status-related global variables
+const STATUS_CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
+let currentStatusIconName = STATUS.PENDING; // Default icon is now pending
+
+// Platform identifiers in the API response
+const PLATFORM = {
+    API: 1,
+    MULTIMODAL_LIVE_API: 2,
+    GOOGLE_AI_STUDIO: 3,
+};
+
+// Platform names for display
+const PLATFORM_NAMES: Record<number, string> = {
+    1: "Gemini API",
+    2: "Multimodal Live API",
+    3: "Google AI Studio",
+};
+
+// Incident status identifiers in the API response
+const INCIDENT_STATUS = {
+    DETECTED: 1,
+    IDENTIFIED: 2,
+    MITIGATED: 3,
+    RESOLVED: 4,
+};
+const INCIDENT_STATUS_NAMES: Record<number, keyof typeof INCIDENT_STATUS> = {
+    [INCIDENT_STATUS.DETECTED]: "DETECTED",
+    [INCIDENT_STATUS.IDENTIFIED]: "IDENTIFIED",
+    [INCIDENT_STATUS.MITIGATED]: "MITIGATED",
+    [INCIDENT_STATUS.RESOLVED]: "RESOLVED",
+};
+
+// Outage severity identifiers in the API response
+const OUTAGE_SEVERITY = {
+    PARTIAL: 1,
+    // Anything other than 1 is considered a total outage
+};
+
+// Storing tooltip elements globally
+let statusTooltipElement: HTMLElement | null = null;
+let statusTooltipContainer: HTMLElement | null = null;
+
 // Listen for messages from the background script
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "getInfo") {
@@ -36,7 +87,12 @@ function initialize(): void {
 
     // Add any page initialization here
     injectImportButton();
+    injectStatusButton();
     createImportDialog(); // Create the dialog on initialization (but keep it hidden)
+
+    // Check status initially and then at regular intervals
+    checkAndUpdateStatus();
+    setInterval(checkAndUpdateStatus, STATUS_CHECK_INTERVAL);
 }
 
 /**
@@ -108,6 +164,7 @@ function injectButton(targetElement: Element): void {
     const textWrapper = importButton.querySelector(".nav-item-text-wrapper");
     if (textWrapper) {
         textWrapper.textContent = "Import Prompt";
+        textWrapper.classList.add("ai-studio-ext-button-text");
     }
 
     // Optionally update the icon to a more appropriate one for import
@@ -131,6 +188,488 @@ function injectButton(targetElement: Element): void {
     targetElement.parentNode?.insertBefore(importButton, targetElement.nextSibling);
 
     console.debug("Import Prompt button injected successfully");
+}
+
+/**
+ * Injects the "AI Studio Status" button into the navigation bar
+ * in the external links section after the Changelog item
+ */
+function injectStatusButton(): void {
+    // First try to find the external links section
+    const navList = document.querySelector(".nav-list .external-links");
+
+    if (navList) {
+        // Try to find the Changelog item
+        let changelogElement = null;
+
+        for (let i = 0; i < navList.children.length; i++) {
+            const el = navList.children[i];
+            if (el.textContent && el.textContent.toLowerCase().includes("changelog")) {
+                changelogElement = el;
+                break;
+            }
+        }
+
+        // If we found the Changelog item, inject our Status button after it
+        if (changelogElement) {
+            injectStatusLink(changelogElement);
+        } else {
+            // If not found yet, set up a mutation observer
+            const navObserver = new MutationObserver((mutations, observer) => {
+                const navList = document.querySelector(".nav-list .external-links");
+                if (navList) {
+                    // Set flex to 0 to fix click area issues:
+                    (navList as HTMLElement).style.flex = "0";
+                    // Loop through all children to add status link:
+                    for (let i = 0; i < navList.children.length; i++) {
+                        const el = navList.children[i];
+                        if (el.textContent && el.textContent.toLowerCase().includes("changelog")) {
+                            injectStatusLink(el);
+                            observer.disconnect(); // Stop observing once button is injected
+                            break;
+                        }
+                    }
+                }
+            });
+
+            // Start observing for the nav list
+            navObserver.observe(document.body, {
+                childList: true,
+                subtree: true,
+            });
+        }
+    } else {
+        // If external links section not found yet, set up a mutation observer
+        const bodyObserver = new MutationObserver((mutations, observer) => {
+            const navList = document.querySelector(".nav-list .external-links");
+            if (navList) {
+                let changelogElement = null;
+
+                for (let i = 0; i < navList.children.length; i++) {
+                    const el = navList.children[i];
+                    if (el.textContent && el.textContent.toLowerCase().includes("changelog")) {
+                        changelogElement = el;
+                        break;
+                    }
+                }
+
+                if (changelogElement) {
+                    injectStatusLink(changelogElement);
+                    observer.disconnect(); // Stop observing once button is injected
+                }
+            }
+        });
+
+        // Start observing for the external links section
+        bodyObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    }
+}
+
+/**
+ * Creates and injects the AI Studio Status link after the specified element
+ *
+ * @param {Element} targetElement - The element after which to inject the status link
+ */
+function injectStatusLink(targetElement: Element): void {
+    // Clone the target element to maintain styling and structure
+    const statusLink = targetElement.cloneNode(true) as Element;
+
+    // Update the href attribute in the anchor tag
+    const anchorElement = statusLink.querySelector("a");
+    if (anchorElement) {
+        anchorElement.setAttribute("href", "https://aistudio.google.com/status");
+        anchorElement.setAttribute("aria-label", "AI Studio Status");
+        anchorElement.setAttribute("target", "_blank"); // Open in new tab
+
+        // Remove active class if present
+        anchorElement.classList.remove("active");
+    }
+
+    // Update the text content in the nav-item-text-wrapper div
+    const textWrapper = statusLink.querySelector(".nav-item-text-wrapper");
+    if (textWrapper) {
+        textWrapper.textContent = "Status";
+        textWrapper.classList.add("ai-studio-ext-button-text");
+
+        // Remove any NEW badge if it exists
+        const newBadge = textWrapper.querySelector(".new-badge");
+        if (newBadge) {
+            newBadge.remove();
+        }
+    }
+
+    // Update the icon to a more appropriate one for status
+    const iconSpan = statusLink.querySelector(".material-symbols-outlined");
+    if (iconSpan) {
+        iconSpan.textContent = currentStatusIconName; // Using an appropriate icon for status
+        iconSpan.id = "ai-studio-status-icon"; // Add an ID so we can update it later
+    }
+
+    // Insert after the target element
+    targetElement.parentNode?.insertBefore(statusLink, targetElement.nextSibling);
+
+    console.debug("AI Studio Status link injected successfully");
+
+    // Add tooltip styles to the document if they don't exist
+    addTooltipStyles();
+
+    // Create the tooltip in the body
+    createStatusTooltip();
+
+    // Add mouse events to the status link
+    if (statusLink) {
+        statusLink.addEventListener("mouseenter", showStatusTooltip);
+        statusLink.addEventListener("mouseleave", hideStatusTooltip);
+    }
+}
+
+/**
+ * Adds tooltip styles to the document
+ */
+function addTooltipStyles(): void {
+    const styleId = "ai-studio-status-tooltip-styles";
+    if (!document.getElementById(styleId)) {
+        const style = document.createElement("style");
+        style.id = styleId;
+        style.textContent = `
+            .ai-studio-ext-button-text {
+                opacity: 1;
+                transition: opacity 0.3s ease-in-out, width 0.3s ease-in-out;
+                white-space: nowrap;
+                overflow: hidden;
+                display: inline-block;
+                max-width: 100%;
+            }
+
+            /* Hide text in buttons when navbar is collapsed */
+            .layout-navbar.collapsed .ai-studio-ext-button-text {
+                opacity: 0;
+                max-width: 0;
+            }
+
+            .ai-studio-status-tooltip {
+                position: fixed;
+                border-radius: 6px;
+                z-index: 10001;
+                pointer-events: none;
+                user-select: none;
+                opacity: 0;
+                transform: translateY(-50%) scale(0.5);
+                transform-origin: center left;
+                transition: opacity 0.05s ease-in-out, transform 0.05s ease-in-out;
+            }
+
+            .ai-studio-status-tooltip > .mat-mdc-tooltip {
+                width: 280px;
+                max-width: 80vw;
+                max-height: calc(100vh - 150px);
+                overflow-y: auto;
+                border-radius: var(--mdc-plain-tooltip-container-shape, var(--mat-sys-corner-extra-small));
+                background-color: var(--mdc-plain-tooltip-container-color, var(--mat-sys-inverse-surface));
+                padding: 12px;
+                white-space: normal;
+            }
+
+            .status-tooltip-title {
+                font-weight: 500;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .status-tooltip-title .status-icon {
+                font-family: 'Material Symbols Outlined';
+                font-size: 16px;
+            }
+
+            /* Status icon colors */
+            .status-tooltip-title.operational .status-icon,
+            .status-platform-title .status-icon.operational {
+                color: hsl(from var(--color-error-tooltip) calc(h + 120) s l);
+            }
+
+            .status-tooltip-title.partial .status-icon,
+            .status-platform-title .status-icon.partial {
+                color: hsl(from var(--color-error-tooltip) calc(h + 40) s l);
+            }
+
+            .status-tooltip-title.total .status-icon,
+            .status-platform-title .status-icon.total {
+                color: var(--color-error-tooltip);
+            }
+
+            /* Style for the actual status button icon */
+            #ai-studio-status-icon.operational {
+                color: hsl(from var(--color-error-tooltip) calc(h + 120) s l);
+            }
+
+            #ai-studio-status-icon.partial {
+                color: hsl(from var(--color-error-tooltip) calc(h + 40) s l);
+            }
+
+            #ai-studio-status-icon.total {
+                color: var(--color-error-tooltip);
+            }
+
+            #ai-studio-status-icon {
+                font-family: 'Material Symbols Outlined';
+            }
+
+            .status-platform-section:not(:last-child) {
+                margin-bottom: 12px;
+            }
+
+            .status-platform-section ul {
+                margin-left: 1em;
+            }
+
+            .status-platform-title {
+                font-weight: 500;
+                margin-bottom: 4px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .status-platform-title .status-icon {
+                font-family: 'Material Symbols Outlined';
+                font-size: 16px;
+            }
+
+            .status-incident-list {
+                margin: 0;
+                padding-left: 20px;
+            }
+
+            .status-incident-item {
+                margin-bottom: 8px;
+            }
+
+            .status-incident-name {
+                font-weight: 500;
+            }
+
+            .status-incident-description {
+                margin-top: 2px;
+                font-size: 12px;
+                opacity: 0.9;
+            }
+
+            .status-no-incidents {
+                font-style: italic;
+                opacity: 0.7;
+            }
+
+            @media screen and (max-height: 600px) {
+                .ai-studio-status-tooltip {
+                    max-height: calc(100vh - 100px);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+/**
+ * Creates the status tooltip element and appends it to the document body
+ */
+function createStatusTooltip(): void {
+    // Only create if it doesn't exist yet
+    if (statusTooltipElement === null) {
+        // Create outer tooltip container with Material Design class
+        const outerTooltip = document.createElement("div");
+        outerTooltip.classList.add("gmat-mdc-tooltip");
+        outerTooltip.classList.add("ai-studio-status-tooltip");
+
+        // Create inner tooltip content container
+        statusTooltipElement = document.createElement("div");
+        statusTooltipElement.classList.add("mat-mdc-tooltip");
+
+        // Append inner to outer, and outer to body
+        outerTooltip.appendChild(statusTooltipElement);
+        document.body.appendChild(outerTooltip);
+
+        // Store reference to outer tooltip for show/hide functions
+        statusTooltipContainer = outerTooltip;
+    }
+}
+
+/**
+ * Shows the status tooltip and positions it next to the status icon
+ */
+function showStatusTooltip(): void {
+    if (!statusTooltipElement || !statusTooltipContainer) return;
+
+    // Position the tooltip
+    const iconElement = document.getElementById("ai-studio-status-icon")?.parentElement?.parentElement?.parentElement;
+    if (iconElement) {
+        const iconRect = iconElement.getBoundingClientRect();
+        positionTooltip(statusTooltipContainer, iconRect);
+
+        // Make tooltip visible
+        statusTooltipContainer.style.opacity = "1";
+        statusTooltipContainer.style.transform = "translateY(-50%) scale(1)";
+    }
+}
+
+/**
+ * Hides the status tooltip
+ */
+function hideStatusTooltip(): void {
+    if (statusTooltipContainer) {
+        statusTooltipContainer.style.opacity = "";
+        statusTooltipContainer.style.transform = "translateY(-50%) scale(0.5)";
+    }
+}
+
+/**
+ * Positions the tooltip relative to the button
+ *
+ * @param {HTMLElement} tooltip - The tooltip element
+ * @param {DOMRect} buttonRect - The button's bounding rectangle
+ */
+function positionTooltip(tooltip: HTMLElement, buttonRect: DOMRect): void {
+    if (!tooltip) return;
+
+    // Default position to the right of the button
+    let left = buttonRect.right + 8;
+    let top = buttonRect.top + buttonRect.height / 2;
+
+    // Reset any previous transforms
+    tooltip.style.transform = "translateY(-50%)";
+
+    // Calculate tooltip dimensions
+    const tooltipWidth = tooltip.offsetWidth || 280; // Use 280 as fallback
+    const tooltipHeight = tooltip.offsetHeight || 200; // Use 200 as fallback
+
+    // Check viewport boundaries
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Check if tooltip would overflow right edge
+    if (left + tooltipWidth > viewportWidth) {
+        // Position to the left of the button
+        left = buttonRect.left - 8 - tooltipWidth;
+    }
+
+    // Ensure the tooltip doesn't go off the top or bottom of the viewport
+    const topOffset = top - tooltipHeight / 2;
+    const bottomOffset = top + tooltipHeight / 2;
+
+    // Adjust if too high
+    if (topOffset < 0) {
+        tooltip.style.transform = `translateY(${Math.abs(topOffset) + 10}px) translateY(-50%)`;
+    }
+    // Adjust if too low
+    else if (bottomOffset > viewportHeight) {
+        tooltip.style.transform = `translateY(-${bottomOffset - viewportHeight + 10}px) translateY(-50%)`;
+    }
+
+    // Apply position
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+}
+
+/**
+ * Updates the status tooltip content based on active incidents
+ */
+function updateStatusTooltip(): void {
+    if (!statusTooltipElement) {
+        createStatusTooltip();
+    }
+
+    if (!statusTooltipElement) return;
+
+    // Determine overall status for title
+    let statusTitle = "All Systems Operational";
+    let statusTitleClass = "operational";
+    let statusTitleIcon = STATUS.OPERATIONAL;
+
+    if (activeIncidents.some((incident) => incident.severity !== OUTAGE_SEVERITY.PARTIAL)) {
+        statusTitle = "Service Disruption";
+        statusTitleClass = "total";
+        statusTitleIcon = STATUS.TOTAL_OUTAGE;
+    } else if (activeIncidents.length > 0) {
+        statusTitle = "Partial Service Disruption";
+        statusTitleClass = "partial";
+        statusTitleIcon = STATUS.PARTIAL_OUTAGE;
+    }
+
+    // Group incidents by platform
+    const platformIncidents: Record<number, ActiveIncidentData[]> = {};
+    for (let i = 0; i < activeIncidents.length; i++) {
+        const incident = activeIncidents[i];
+        const platformId = incident.platformId;
+
+        if (!platformIncidents[platformId]) {
+            platformIncidents[platformId] = [];
+        }
+
+        platformIncidents[platformId].push(incident);
+    }
+
+    // Build tooltip HTML
+    let tooltipHtml = `
+        <div class="status-tooltip-title ${statusTitleClass}">
+            <span class="status-icon">${statusTitleIcon}</span>
+            <span>${statusTitle}</span>
+        </div>
+    `;
+
+    // No active incidents
+    if (activeIncidents.length === 0) {
+        tooltipHtml += `<div class="status-no-incidents">No active incidents reported.</div>`;
+    } else {
+        // Add sections for each platform with active incidents
+        for (const platformId in platformIncidents) {
+            if (platformIncidents.hasOwnProperty(platformId)) {
+                const incidents = platformIncidents[Number(platformId)];
+                const platformName = PLATFORM_NAMES[Number(platformId)] || `Platform ${platformId}`;
+
+                // Determine platform status icon
+                let platformIcon = STATUS.OPERATIONAL;
+                let platformIconClass = "operational";
+                if (incidents.some((incident: ActiveIncidentData) => incident.severity !== OUTAGE_SEVERITY.PARTIAL)) {
+                    platformIcon = STATUS.TOTAL_OUTAGE;
+                    platformIconClass = "total";
+                } else {
+                    platformIcon = STATUS.PARTIAL_OUTAGE;
+                    platformIconClass = "partial";
+                }
+
+                tooltipHtml += `
+                    <div class="status-platform-section">
+                        <div class="status-platform-title">
+                            <span class="status-icon ${platformIconClass}">${platformIcon}</span>
+                            <span>${platformName}</span>
+                        </div>
+                        <ul class="status-incident-list">
+                `;
+
+                for (let i = 0; i < incidents.length; i++) {
+                    const incident = incidents[i];
+                    tooltipHtml += `
+                        <li class="status-incident-item">
+                            <div class="status-incident-name">${incident.incidentName}</div>
+                            <div class="status-incident-description">${incident.incidentDescription}</div>
+                        </li>
+                    `;
+                }
+
+                tooltipHtml += `
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+    }
+
+    // Set the tooltip content
+    statusTooltipElement.innerHTML = tooltipHtml;
 }
 
 /**
@@ -434,24 +973,28 @@ function createImportDialog(): void {
                 content: "error";
                 font-family: 'Material Symbols Outlined';
                 font-size: 18px;
+                color: var(--color-error-tooltip);
             }
 
             .import-validation-warning::before {
                 content: "warning";
                 font-family: 'Material Symbols Outlined';
                 font-size: 18px;
+                color: hsl(from var(--color-error-tooltip) calc(h + 40) s l);
             }
 
             .import-validation-info::before {
                 content: "info";
                 font-family: 'Material Symbols Outlined';
                 font-size: 18px;
+                color: hsl(from var(--color-error-tooltip) calc(h + 225) s l);
             }
 
             .import-validation-success::before {
                 content: "check_circle";
                 font-family: 'Material Symbols Outlined';
                 font-size: 18px;
+                color: hsl(from var(--color-error-tooltip) calc(h + 120) s l);
             }
         `;
         document.head.appendChild(style);
@@ -566,7 +1109,7 @@ function setupDialogEventHandlers(): void {
 
         // Check if content can be converted via convertPromptData
         try {
-            const convertedData = (window as any).convertPromptData(promptName, parsedJson);
+            const convertedData = (window as any).aiStudioExt.convertPromptData(promptName, parsedJson);
             if (!convertedData) {
                 if (errorDiv) {
                     errorDiv.textContent = "This JSON format is not recognized as a valid prompt.";
@@ -793,10 +1336,9 @@ function setupDialogEventHandlers(): void {
 
                     // Use the global version of createMakerSuitePrompt
                     try {
-                        (window as any).createMakerSuitePrompt(
-                            promptName,
-                            promptData,
-                            (responseText: string) => {
+                        (window as any).aiStudioExt
+                            .createMakerSuitePrompt(promptName, promptData)
+                            .then((responseText: string) => {
                                 console.debug("Prompt created successfully:", responseText);
                                 try {
                                     const json = JSON.parse(responseText);
@@ -812,16 +1354,15 @@ function setupDialogEventHandlers(): void {
                                 // Close dialog after successful import
                                 enableControls(); // Re-enable on error
                                 closeDialog();
-                            },
-                            (status: number | string, statusText: string | null) => {
+                            })
+                            .catch((status: number | string, statusText: string | null) => {
                                 console.error("Failed to create prompt:", status, statusText);
                                 alert("Failed to create prompt.\nError: " + status + " " + statusText);
 
                                 // Close dialog after successful import
                                 enableControls(); // Re-enable on error
                                 closeDialog();
-                            }
-                        );
+                            });
                     } catch (e) {
                         console.error("Failed to create prompt:", e);
                         alert("Failed to create prompt. Error: " + e);
@@ -905,6 +1446,181 @@ function closeDialog(): void {
     // Hide the dialog
     overlayContainer.style.display = "none";
     isImportDialogOpen = false;
+}
+
+/**
+ * Fetches the incidents data from the AI Studio status API
+ *
+ * @returns {Promise<any>} The parsed incidents data
+ */
+async function fetchIncidentsData(): Promise<any> {
+    try {
+        return JSON.parse(await (window as any).aiStudioExt.sendMakerSuiteRequest("ListIncidentsHistory", "POST", []));
+    } catch (error) {
+        console.error("Failed to fetch incidents data:", error);
+        return null;
+    }
+}
+
+/**
+ * Gets the latest update of an incident
+ *
+ * @param {any[]} statusUpdates - Array of status updates for the incident
+ * @returns {any} The latest status update
+ */
+function getLatestUpdate(statusUpdates: any[]): any {
+    // Sort by timestamp (descending)
+    const sorted = [...statusUpdates].sort((a, b) => {
+        const timeA = new Date(a[1]).getTime();
+        const timeB = new Date(b[1]).getTime();
+        return timeB - timeA;
+    });
+
+    return sorted[0];
+}
+
+/**
+ * Determines if an incident is unresolved based on its status timestamps
+ *
+ * @param {any[]} statusUpdates - Array of status updates for the incident
+ * @returns {boolean} True if the incident is unresolved, false otherwise
+ */
+function isIncidentUnresolved(statusUpdates: any[]): boolean {
+    // Check if the latest status update is not RESOLVED
+    const latestUpdate = getLatestUpdate(statusUpdates);
+    return latestUpdate[0] !== INCIDENT_STATUS.RESOLVED;
+}
+
+/**
+ * Stores data about active incidents
+ */
+interface ActiveIncidentData {
+    platformId: number;
+    platformName: string;
+    incidentName: string;
+    incidentDescription: string;
+    severity: number;
+}
+
+/**
+ * Current active incidents, stored globally for the tooltip
+ */
+let activeIncidents: ActiveIncidentData[] = [];
+
+/**
+ * Determines the system status based on incidents data
+ *
+ * @param {any} incidentsData - The parsed incidents data from the API
+ * @returns {string} The appropriate status icon name
+ */
+function determineSystemStatus(incidentsData: any): string {
+    if (!incidentsData || !Array.isArray(incidentsData[0]) || !Array.isArray(incidentsData[0][0])) {
+        // Return default icon if we can't parse the data
+        return STATUS.OPERATIONAL;
+    }
+
+    // Reset active incidents
+    activeIncidents = [];
+
+    const incidents = incidentsData[0][0];
+    let hasPartialOutage = false;
+    let hasTotalOutage = false;
+
+    for (let i = 0; i < incidents.length; i++) {
+        const incident = incidents[i];
+        const platformId = incident[4];
+        const statusUpdates = incident[3];
+
+        // Check if the incident is still unresolved, regardless of platform
+        // Get the latest update to display in tooltip
+        const latestUpdate = getLatestUpdate(statusUpdates);
+        if (latestUpdate[0] !== INCIDENT_STATUS.RESOLVED) {
+            // Add to active incidents list
+            activeIncidents.push({
+                platformId: platformId,
+                platformName: PLATFORM_NAMES[platformId] || `Platform ${platformId}`,
+                incidentName: incident[1],
+                incidentDescription: INCIDENT_STATUS_NAMES[latestUpdate[0]] + ": " + latestUpdate[3],
+                severity: incident[2],
+            });
+
+            // Check the outage severity
+            if (incident[2] === OUTAGE_SEVERITY.PARTIAL) {
+                hasPartialOutage = true;
+            } else {
+                // Anything other than PARTIAL is considered a total outage
+                hasTotalOutage = true;
+            }
+        }
+    }
+
+    // Update the tooltip with active incidents data
+    updateStatusTooltip();
+
+    // Determine status based on outages
+    if (hasTotalOutage) {
+        return STATUS.TOTAL_OUTAGE;
+    } else if (hasPartialOutage) {
+        return STATUS.PARTIAL_OUTAGE;
+    } else {
+        return STATUS.OPERATIONAL;
+    }
+}
+
+/**
+ * Updates the status icon based on the current system status
+ *
+ * @param {string} iconName - The name of the icon to display
+ */
+function updateStatusIcon(iconName: string): void {
+    const statusIcon = document.getElementById("ai-studio-status-icon");
+    if (statusIcon) {
+        statusIcon.textContent = iconName;
+
+        // Update current status icon name for new injections
+        currentStatusIconName = iconName;
+
+        // Update icon color class
+        statusIcon.classList.remove("operational", "partial", "total");
+        if (iconName === STATUS.OPERATIONAL) {
+            statusIcon.classList.add("operational");
+        } else if (iconName === STATUS.PARTIAL_OUTAGE) {
+            statusIcon.classList.add("partial");
+        } else if (iconName === STATUS.TOTAL_OUTAGE) {
+            statusIcon.classList.add("total");
+        }
+    }
+}
+
+/**
+ * Checks the status of AI Studio and updates the status icon accordingly
+ */
+async function checkAndUpdateStatus(): Promise<void> {
+    try {
+        // Check if the status icon is visible
+        const statusIconElement = document.getElementById("ai-studio-status-icon");
+        if (!statusIconElement) return;
+
+        // Set icon to pending while checking
+        updateStatusIcon(STATUS.PENDING);
+
+        const incidentsData = await fetchIncidentsData();
+
+        if (incidentsData === null) {
+            // API call failed
+            updateStatusIcon(STATUS.ERROR);
+            console.error("Failed to fetch incidents data: API response was null");
+            return;
+        }
+
+        const statusIcon = determineSystemStatus(incidentsData);
+        updateStatusIcon(statusIcon);
+        console.debug("AI Studio status updated:", statusIcon);
+    } catch (error) {
+        // Set icon to error on failure
+        updateStatusIcon(STATUS.ERROR);
+        console.error("Failed to update status:", error);
+    }
 }
 
 // Initialize when the document is fully loaded

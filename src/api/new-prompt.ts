@@ -2,33 +2,21 @@
 // The import is replaced with direct function reference that's globally available
 (function () {
     // Cache for API keys and tracking successful key
+    let cachedUrl: string | null = null;
     let cachedApiKeys: string[] | null = null;
     let lastSuccessfulKey: string | null = null;
 
-    /**
-     * Creates a prompt using the MakerSuite API.
-     *
-     * @param {string} promptData - The prompt data in the format expected by the API.
-     * @param {function} onSuccess - Callback function to execute on successful API call.  Receives the response text as an argument.
-     * @param {function} onError - Callback function to execute on API error. Receives the error status and status text as arguments.
-     */
-    function createMakerSuitePrompt(
-        promptName: string,
-        promptData: any,
-        onSuccess: (responseText: string) => void,
-        onError: (status: number | string, statusText: string | null) => void
-    ): void {
-        var url = `${findUrl()}/$rpc/google.internal.alkali.applications.makersuite.v1.MakerSuiteService/CreatePrompt`;
-        var method = "POST";
-        var async = true;
+    function sendMakerSuiteRequest(path: string, method: string, data: any): Promise<string> {
+        const url = `${findUrl()}/$rpc/google.internal.alkali.applications.makersuite.v1.MakerSuiteService/${path}`;
+        const async = true;
 
-        promptData = JSON.stringify(convertPromptData(promptName, promptData));
+        data = JSON.stringify(data);
 
         // Check if the required functions are available
-        if (typeof (window as any).getAuthTokens !== "function") throw new Error("getAuthTokens is not a function");
-        //if (typeof (window as any).findApiKeys !== "function") throw new Error("findApiKeys is not a function");
+        if (typeof (window as any).aiStudioExt.getAuthTokens !== "function") throw new Error("getAuthTokens is not a function");
+        //if (typeof (window as any).aiStudioExt.findApiKeys !== "function") throw new Error("findApiKeys is not a function");
         // Get the auth tokens and API keys
-        const authTokens = (window as any).getAuthTokens([]);
+        const authTokens = (window as any).aiStudioExt.getAuthTokens([]);
         if (!authTokens) throw new Error("No auth tokens found");
 
         // Use cached API keys if available, otherwise fetch them
@@ -46,8 +34,10 @@
             keysToTry = [lastSuccessfulKey, ...cachedApiKeys.filter((key) => key !== lastSuccessfulKey)];
         }
 
-        // Try each API key until success or all keys are exhausted
-        attemptRequestWithKeys(0, keysToTry);
+        return new Promise((resolve, reject) => {
+            // Try each API key until success or all keys are exhausted
+            attemptRequestWithKeys(0, keysToTry, resolve, reject);
+        });
 
         /**
          * Attempts to make the API request with a specific API key index.
@@ -56,7 +46,7 @@
          * @param {number} keyIndex - The index of the API key to use
          * @param {string[]} keys - The array of API keys to try
          */
-        function attemptRequestWithKeys(keyIndex: number, keys: string[]): void {
+        function attemptRequestWithKeys(keyIndex: number, keys: string[], onSuccess: (responseText: string) => void, onError: (status: number | string, statusText: string | null) => void): void {
             // If we've tried all keys, report error
             if (keyIndex >= keys.length) {
                 if (onError) {
@@ -78,7 +68,7 @@
             // Handle response
             xhr.onload = function () {
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    console.log("Success:", xhr.responseText);
+                    console.debug("Success:", xhr.responseText);
                     // Store the successful key
                     lastSuccessfulKey = currentKey;
                     if (onSuccess) {
@@ -89,19 +79,19 @@
 
                     // If this was our last successful key that failed, refresh keys
                     if (currentKey === lastSuccessfulKey) {
-                        console.log("Previously successful key failed, refreshing API keys...");
+                        console.warn("Previously successful key failed, refreshing API keys...");
                         cachedApiKeys = findApiKeys([currentKey]); // Ignore the failed key
                         lastSuccessfulKey = null;
 
                         // If we have new keys, try those
                         if (cachedApiKeys.length > 0) {
-                            attemptRequestWithKeys(0, cachedApiKeys);
+                            attemptRequestWithKeys(0, cachedApiKeys, onSuccess, onError);
                             return;
                         }
                     }
 
                     // Try the next key
-                    attemptRequestWithKeys(keyIndex + 1, keys);
+                    attemptRequestWithKeys(keyIndex + 1, keys, onSuccess, onError);
                 }
             };
 
@@ -110,25 +100,38 @@
 
                 // If this was our last successful key that failed, refresh keys
                 if (currentKey === lastSuccessfulKey) {
-                    console.log("Previously successful key failed, refreshing API keys...");
+                    console.warn("Previously successful key failed, refreshing API keys...");
                     cachedApiKeys = findApiKeys([currentKey]); // Ignore the failed key
                     lastSuccessfulKey = null;
 
                     // If we have new keys, try those
                     if (cachedApiKeys.length > 0) {
-                        attemptRequestWithKeys(0, cachedApiKeys);
+                        attemptRequestWithKeys(0, cachedApiKeys, onSuccess, onError);
                         return;
                     }
                 }
 
                 // Try the next key
-                attemptRequestWithKeys(keyIndex + 1, keys);
+                attemptRequestWithKeys(keyIndex + 1, keys, onSuccess, onError);
             };
 
             // Send the request
             xhr.withCredentials = true; //Include cookies, use this when you need to authenticate
-            xhr.send(promptData);
+            xhr.send(data);
         }
+    }
+    /**
+     * Creates a prompt using the MakerSuite API.
+     *
+     * @param {string} promptData - The prompt data in the format expected by the API.
+     * @param {function} onSuccess - Callback function to execute on successful API call.  Receives the response text as an argument.
+     * @param {function} onError - Callback function to execute on API error. Receives the error status and status text as arguments.
+     */
+    function createMakerSuitePrompt(
+        promptName: string,
+        promptData: any
+    ): Promise<string> {
+        return sendMakerSuiteRequest("CreatePrompt", "POST", convertPromptData(promptName, promptData));
     }
 
     /**
@@ -159,12 +162,14 @@
      * @returns {string} The URL of the MakerSuite API.
      */
     function findUrl(): string {
+        if (cachedUrl) return cachedUrl;
         const scripts = document.querySelectorAll("script");
         for (const script of scripts as unknown as HTMLScriptElement[]) {
             const src = script.innerHTML;
             const match = src.match(/[`'"](https\:\/\/alkalimakersuite[^`'"]*\.google\.com)[`'"]/g);
             if (match) {
-                return match[0].replace(/[`'"]/g, "");
+                cachedUrl = match[0].replace(/[`'"]/g, "");
+                return cachedUrl;
             }
         }
         throw new Error("No API URL found");
@@ -603,8 +608,14 @@
         model?: string;
     }
 
-    // Make createMakerSuitePrompt globally available
-    (window as any).createMakerSuitePrompt = createMakerSuitePrompt;
-    (window as any).convertPromptData = convertPromptData;
+    // Make commands available globally
+    (window as any).aiStudioExt ??= {};
+    Object.assign((window as any).aiStudioExt, {
+        sendMakerSuiteRequest,
+        createMakerSuitePrompt,
+        convertPromptData,
+        findUrl,
+        findApiKeys,
+    });
     console.debug("new-prompt.ts loaded");
 })();

@@ -709,6 +709,10 @@
         };
     }
 
-    (window as any).getAuthTokens = getAuthTokens;
+    // Make getAuthTokens available globally
+    (window as any).aiStudioExt ??= {};
+    Object.assign((window as any).aiStudioExt, {
+        getAuthTokens,
+    });
     console.debug("auth.ts loaded");
 })();
