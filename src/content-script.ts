@@ -1604,8 +1604,7 @@ function determineSystemStatus(incidentsData: any): string {
     for (let i = 0; i < incidents.length; i++) {
         const incident = incidents[i];
         const platformId = incident[4];
-        const statusUpdates = incident[3].filter((update: any) => update[0] !== INCIDENT_STATUS.RESOLVED);
-        incident[2] = Math.floor(Math.random() * 2) + 1;
+        const statusUpdates = incident[3];
 
         // Check if the incident is still unresolved, regardless of platform
         // Get the latest update to display in tooltip
