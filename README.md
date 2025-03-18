@@ -6,6 +6,8 @@ A Chrome extension that enhances Google's AI Studio with additional functionalit
 
 -   [Features](#features)
     -   [Import Prompt](#import-prompt)
+    -   [Status Icon](#status-icon)
+    -   [UI Improvements](#ui-improvements)
 -   [Screenshots](#screenshots)
 -   [Installation](#installation)
     -   [From Chrome Web Store](#from-chrome-web-store-coming-soon)
@@ -28,6 +30,20 @@ The Import Prompt feature supports the following formats:
 
 -   [Gemini API](https://ai.google.dev/api/generate-content#method:-models.generatecontent) (models.generateContent Request format)
 -   [AI Studio Prompt](https://aistudio.google.com/library) (prompts can be downloaded from your Google Drive)
+
+### Status Icon
+
+Adds a "Status" indicator in the navigation menu that shows the current operational status of AI Studio:
+
+-   Green check icon: All systems operational
+-   Yellow warning icon: Partial service disruption
+-   Red alert icon: Service disruption
+
+Hover over the Status icon to see detailed information about any ongoing incidents. The status automatically updates every 5 minutes.
+
+### UI Improvements
+
+-   Fixed click areas in the navbar for improved user experience
 
 ## Screenshots
 
