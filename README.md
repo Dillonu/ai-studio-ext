@@ -69,6 +69,14 @@ Here's how the extension looks in action:
 
 ![Import Prompt - Error](docs/screenshots/PopupError.png)
 
+### Status Icon - All Systems Operational
+
+![Status - All Operational](docs/screenshots/StatusOkay.png)
+
+### Status Icon - Service Disruption
+
+![Status - Service Disruption](docs/screenshots/StatusBad.png)
+
 ## Installation
 
 ### From Chrome Web Store (Coming Soon)
